@@ -26,6 +26,7 @@ void lsh_loop()
     } while(status); // exit condition
 }
 
+#define LSH_RL_BUFFSIZE 1024
 char *lsh_read_line(void)
 {
     //variable declarations
@@ -88,6 +89,44 @@ char *lsh_read_line(void)
     return line;
     */
 }
+
+#define LSH_TOK_BUFFSIZE 64
+#define LSH_TOK_DELIM " \t\r\n\a"
+char **lsh_split_line(char *line)
+{
+    int buffsize = LSH_TOK_BUFFSIZE, position = 0;
+    char **tokens = malloc(buffsize * sizeof(char*)), *token;
+
+    if (!tokens)
+    {
+        fprintf(stderr, "LSH: Allocation Error.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    token = strtok(line, LSH_TOK_DELIM); // get pointers to store as an array of character pointers
+    while(token != NULL)
+    {
+        // store character pointer(s) in array
+        tokens[position] = token;
+        position++;
+
+        if(position >= buffsize) // check for buffer size 
+        {
+            // reallocate if buffer size is not enough
+            buffsize += LSH_TOK_BUFFSIZE;
+            tokens = realloc(tokens, buffsize * sizeof(char*));
+            if(!tokens)
+            {
+                fprintf(stderr, "LSH: Allocation Error.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        token = strtok(NULL, LSH_TOK_DELIM);
+    }
+    tokens[position] = NULL;
+    return tokens;
+}
+
 
 int main(int argc, char **argv)
 {
