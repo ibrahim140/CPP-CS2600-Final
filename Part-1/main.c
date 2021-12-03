@@ -127,6 +127,34 @@ char **lsh_split_line(char *line)
     return tokens;
 }
 
+int lsh_launch(char **args)
+{
+    pid_t pid, wpid;
+    int status;
+
+    pid = fork();
+
+    if(pid == 0) // child process
+    {
+        if(execvp(args[0], args) == -1) // check for execvp error
+        {
+            perror("LSH");
+        }
+        exit(EXIT_FAILURE);
+    }
+    else if(pid < 0) // check for fork() error
+    {
+        perror("LSH");
+    }
+    else
+    { // parent process
+        do // wait for process to exit or be terminated
+        {
+            wpid = waitpid(pid, &status, WUNTRACED);
+        } while(!WIFEXITED(status) && !WIFSIGNALED(status));
+    }
+    return 1;
+}
 
 int main(int argc, char **argv)
 {
