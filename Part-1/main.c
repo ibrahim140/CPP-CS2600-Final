@@ -156,6 +156,86 @@ int lsh_launch(char **args)
     return 1;
 }
 
+/*
+    Built-in Shell commands function declarations
+*/
+int lsh_cd(char **args);
+int lsh_help(char **args);
+int lsh_exit(char **args);
+
+/*
+    List of Built-in commands 
+*/
+char *builtin_str[] =
+{
+  "cd",
+  "help",
+  "exit"
+};
+
+/*
+    List of Built-in commands' functions
+*/
+int (*builtin_func[]) (char **) =
+{
+  &lsh_cd,
+  &lsh_help,
+  &lsh_exit
+};
+
+int lsh_num_builtins() 
+{
+    return sizeof(builtin_str)/sizeof(char *);
+}
+
+/*
+    Implementation of the cd built-in function
+*/
+int lsh_cd(char **args)
+{
+    if(args[1] == NULL)
+    {
+        // cd command requires an argument; inform user of error
+        fprintf(stderr, "LSH: Expected Argument to \"cd\"\n");
+    }
+    else
+    {
+        if(chdir(args[1]) != 0) // checks for errors
+        {
+            perror("LSH");
+        }
+    }
+    return 1;
+}
+
+/*
+    Implementation of the help built-in function
+*/
+int lsh_help(char **args)
+{
+    int i;
+
+    printf("Mohammed Ibrahim's LSH\n");
+    printf("Type Program Names and Arguments, and press Enter.\n");
+    printf("The following are built in:\n");
+
+    for(i = 0; i < lsh_num_builtins(); i++)
+    {
+        printf(" %s\n", builtin_str[i]); // print names of built-in commands
+    }
+
+    printf("Use the \"man\" command for more info on other programs.\n");
+    return 1;
+}
+
+/*
+    Implementation of the exit built-in function
+*/
+int lsh_exit(char **args)
+{
+    return 0; // simply exits
+}
+
 int main(int argc, char **argv)
 {
     // load config files & run command loop.
