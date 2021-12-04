@@ -73,7 +73,8 @@ char *lsh_read_line(void)
     /*
     simpifying lsh_read_line function with "getline" function
     char *line = NULL;
-    ssize_t buffsize = 0;
+    ssize_t buffsize = 0; // getline() allocates buffer size
+    
     if(getline(&line, &buffsize, stdin) == -1)
     {
         if(feof(stdin))
