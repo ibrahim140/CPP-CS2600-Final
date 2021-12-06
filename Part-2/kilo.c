@@ -26,18 +26,20 @@ void enableRawMode()
     raw.c_oflag &= ~(OPOST);
     raw.c_cflag |= (CS8);
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw.c_cc[VMIN] = 0; // set minimum # of bytes
+    raw.c_cc[VTIME] = 1; // set max amount of time to wait before read() returns
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
 int main()
 {
-    char c;
-
     enableRawMode();
 
-    while(read(STDIN_FILENO, &c, 1) == 1 && c != 'q')
+    while(1 )
     {
+        char c = '\0';
+        read(STDIN_FILENO, &c, 1);
         if(iscntrl(c))
         {
             printf("%d\r\n", c);
@@ -45,6 +47,11 @@ int main()
         else
         {
             printf("%d ('%c')\r\n", c, c);
+        }
+
+        if(c == 'q')
+        {
+            break;
         }
     }
     
