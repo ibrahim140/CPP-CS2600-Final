@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <errno.h>
 
+/* defines */
+#define CTRL_KEY(k) ((k) & 0x1f)
+
 /* data */
 struct termios orig_termios;
 
@@ -69,7 +72,7 @@ int main()
             printf("%d ('%c')\r\n", c, c);
         }
 
-        if(c == 'q')
+        if(c == CTRL_KEY('q'))
         {
             break;
         }
