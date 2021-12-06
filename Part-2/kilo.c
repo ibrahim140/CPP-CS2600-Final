@@ -1,3 +1,4 @@
+/* Include directives */
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
@@ -5,11 +6,10 @@
 #include <stdio.h>
 #include <errno.h>
 
-
-
-
+/* data */
 struct termios orig_termios;
 
+/* terminal */
 void die(const char *s)
 {
     perror(s);
@@ -47,6 +47,7 @@ void enableRawMode()
     }
 }
 
+/* init */
 int main()
 {
     enableRawMode();
@@ -58,7 +59,7 @@ int main()
         {
             die("read");
         }
-        
+
         if(iscntrl(c))
         {
             printf("%d\r\n", c);
