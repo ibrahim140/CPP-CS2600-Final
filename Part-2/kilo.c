@@ -18,7 +18,9 @@ enum editorKey
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
     ARROW_UP,
-    ARROW_DOWN
+    ARROW_DOWN,
+    PAGE_UP,
+    PAGE_DOWN
 };
 
 /* data */
@@ -85,25 +87,43 @@ int editorReadKey()
         }
     }
 
-    if (c == '\x1b')
+    if(c == '\x1b')
     {
         char seq[3];
-        if (read(STDIN_FILENO, &seq[0], 1) != 1)
+        if(read(STDIN_FILENO, &seq[0], 1) != 1)
             return '\x1b';
-        if (read(STDIN_FILENO, &seq[1], 1) != 1)
+        if(read(STDIN_FILENO, &seq[1], 1) != 1)
             return '\x1b';
-        if (seq[0] == '[')
+
+        if(seq[0] == '[')
         {
-            switch (seq[1])
+            if(seq[1] >= '0' && seq[1] <= '9')
             {
-                case 'A':
-                    return ARROW_UP;
-                case 'B':
-                    return ARROW_DOWN;
-                case 'C':
-                    return ARROW_LEFT;
-                case 'D':
-                    return ARROW_RIGHT;
+                if(read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
+                if(seq[2] == '~')
+                {
+                    switch(seq[1])
+                    {
+                        case '5':
+                            return PAGE_UP;
+                        case '6':
+                            return PAGE_DOWN;
+                    }
+                }
+            }
+            else
+            {
+                switch(seq[1])
+                {
+                    case 'A':
+                        return ARROW_UP;
+                    case 'B':
+                        return ARROW_DOWN;
+                    case 'C':
+                        return ARROW_LEFT;
+                    case 'D':
+                        return ARROW_RIGHT;
+                }
             }
         }
         return '\x1b';
@@ -119,18 +139,18 @@ int getCursorPosition(int *rows, int *cols)
     char buf[32];
     unsigned int i = 0;
 
-    if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4)
+    if(write(STDOUT_FILENO, "\x1b[6n", 4) != 4)
     {
         return -1;
     }
     
-    while (i < sizeof(buf) - 1)
+    while(i < sizeof(buf) - 1)
     {
-        if (read(STDIN_FILENO, &buf[i], 1) != 1)
+        if(read(STDIN_FILENO, &buf[i], 1) != 1)
         {
             break;
         }
-        if (buf[i] == 'R')
+        if(buf[i] == 'R')
         {
             break;
         }
@@ -138,11 +158,11 @@ int getCursorPosition(int *rows, int *cols)
     }
     buf[i] = '\0';
     
-    if (buf[0] != '\x1b' || buf[1] != '[')
+    if(buf[0] != '\x1b' || buf[1] != '[')
     {
         return -1;
     }
-    if (sscanf(&buf[2], "%d;%d", rows, cols) != 2)
+    if(sscanf(&buf[2], "%d;%d", rows, cols) != 2)
     {
         return -1;
     }
@@ -154,9 +174,9 @@ void getWindowSize(int *rows, int *cols)
 {
     struct winsize ws;
 
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+    if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
     {
-        if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)
+        if(write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)
         {
             return -1;
         }
@@ -205,7 +225,7 @@ void editorDrawRows(struct abuf *ab)
     int y;
     for(y = 0; y < E.screenrows; y++)
     {
-        if (y == E.screenrows / 3)
+        if(y == E.screenrows / 3)
         {
             char welcome[80];
             int welcomelen = snprintf(welcome, sizeof(welcome),
@@ -215,7 +235,7 @@ void editorDrawRows(struct abuf *ab)
                 welcomelen = E.screencols;   
             }
             int padding = (E.screencols - welcomelen) / 2;
-            if (padding)
+            if(padding)
             {
                 abAppend(ab, "~", 1);
                 padding--;
@@ -232,7 +252,7 @@ void editorDrawRows(struct abuf *ab)
         }
 
         abAppend(ab, "\x1b[K", 3);
-        if (y < E.screenrows - 1)
+        if(y < E.screenrows - 1)
         {
             abAppend(ab, "\r\n", 2);
         }
@@ -262,7 +282,7 @@ void editorRefreshScreen()
 /* input */
 void editorMoveCursor(int key)
 {
-    switch (key)
+    switch(key)
     {
         case ARROW_LEFT:
             if(E.cx != 0)
@@ -301,6 +321,15 @@ void editorProcessKeypress()
             write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
             break;
+
+        case PAGE_UP: case PAGE_DOWN:
+            {
+                int times = E.screenrows;
+                while(times--)
+                    editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
+            }
+            break;
+
         case ARROW_UP: case ARROW_DOWN: case ARROW_LEFT: case ARROW_RIGHT:
             editorMoveCursor(c);
             break;
@@ -314,7 +343,7 @@ void initEditor()
     E.cx = 0;
     E.cy = 0;
 
-    if (getWindowSize(&E.screenrows, &E.screencols) == -1)
+    if(getWindowSize(&E.screenrows, &E.screencols) == -1)
     {
         die("getWindowSize");
     }
