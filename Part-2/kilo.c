@@ -408,8 +408,10 @@ void editorDrawRows(struct abuf *ab)
         else
         {
             int len = E.row[filerow].rsize - E.coloff;
-            if(len < 0) len = 0;
-            if(len > E.screencols) len = E.screencols;
+            if(len < 0)
+                len = 0;
+            if(len > E.screencols)
+                len = E.screencols;
             abAppend(ab, &E.row[filerow].render[E.coloff], len);
         }
 
@@ -514,6 +516,16 @@ void editorProcessKeypress()
 
         case PAGE_UP: case PAGE_DOWN:
             {
+                if(c == PAGE_UP)
+                {
+                    E.cy = E.rowoff;
+                }
+                else if(c == PAGE_DOWN)
+                {
+                    E.cy = E.rowoff + E.screenrows - 1;
+                    if(E.cy > E.numrows)
+                        E.cy = E.numrows;
+                }
                 int times = E.screenrows;
                 while(times--)
                     editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
