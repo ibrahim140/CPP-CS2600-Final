@@ -251,7 +251,7 @@ void editorAppendRow(char *s, size_t len)
 void editorOpen(char *filename)
 {
     FILE *fp = fopen(filename, "r");
-    if (!fp) die("fopen");
+    if(!fp) die("fopen");
 
     char *line = NULL;
     size_t linecap = 0;
@@ -301,19 +301,19 @@ void abFree(struct abuf *ab)
 
 void editorScroll()
 {
-    if (E.cy < E.rowoff)
+    if(E.cy < E.rowoff)
     {
         E.rowoff = E.cy;
     }
-    if (E.cy >= E.rowoff + E.screenrows)
+    if(E.cy >= E.rowoff + E.screenrows)
     {
         E.rowoff = E.cy - E.screenrows + 1;
     }
-    if (E.cx < E.coloff)
+    if(E.cx < E.coloff)
     {
         E.coloff = E.cx;
     }
-    if (E.cx >= E.coloff + E.screencols)
+    if(E.cx >= E.coloff + E.screencols)
     {
         E.coloff = E.cx - E.screencols + 1;
     }
@@ -356,8 +356,8 @@ void editorDrawRows(struct abuf *ab)
         else
         {
             int len = E.row[filerow].size - E.coloff;
-            if (len < 0) len = 0;
-            if (len > E.screencols) len = E.screencols;
+            if(len < 0) len = 0;
+            if(len > E.screencols) len = E.screencols;
             abAppend(ab, &E.row[filerow].chars[E.coloff], len);
         }
 
@@ -394,6 +394,8 @@ void editorRefreshScreen()
 /* input */
 void editorMoveCursor(int key)
 {
+    erow *row = (E.cy >= E.numrows) ? NULL : &E.row[E.cy];
+
     switch(key)
     {
         case ARROW_LEFT:
@@ -403,7 +405,10 @@ void editorMoveCursor(int key)
             }
             break;
         case ARROW_RIGHT:
-            E.cx++;
+            if(row && E.cx < row->size)
+            {
+                E.cx++;
+            }
             break;
         case ARROW_UP:
             if(E.cy != 0)
@@ -473,7 +478,7 @@ int main(int argc, char *argv[])
 {
     enableRawMode();
     initEditor();
-    if (argc >= 2)
+    if(argc >= 2)
     {
         editorOpen(argv[1]);
     }
