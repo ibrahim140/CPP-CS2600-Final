@@ -456,7 +456,7 @@ void editorOpen(char *filename)
     while((linelen = getline(&line, &linecap, fp)) != -1)
     {
         while(linelen > 0 && (line[linelen - 1] == '\n' ||
-            line[linelen - 1] == '\r'))
+                line[linelen - 1] == '\r'))
             linelen--;
         editorInsertRow(E.numrows, line, linelen);
     }
@@ -503,17 +503,52 @@ void editorSave()
 /* find */
 void editorFindCallback(char *query, int key)
 {
-    if(key == '\r' || key == '\x1b')
-        return;
+    static int last_match = -1, direction = 1;
 
-    int i;
+    if(key == '\r' || key == '\x1b')
+    {
+        last_match = -1;
+        direction = 1;
+        return;
+    }
+    else if(key == ARROW_RIGHT || key == ARROW_DOWN)
+    {
+        direction = 1;
+    }
+    else if(key == ARROW_LEFT || key == ARROW_UP)
+    {
+        direction = -1;
+    }
+    else
+    {
+        last_match = -1;
+        direction = 1;
+    }
+
+    if(last_match == -1)
+        direction = 1;
+
+    int i, current = last_match;
+
     for(i = 0; i < E.numrows; i++)
     {
-        erow *row = &E.row[i];
+        current += direction;
+
+        if(current == -1)
+        {
+            current = E.numrows - 1;
+        }
+        else if(current == E.numrows)
+        {
+            current = 0;
+        }
+
+        erow *row = &E.row[current];
         char *match = strstr(row->render, query);
         if(match)
         {
-            E.cy = i;
+            last_match = current;
+            E.cy = current;
             E.cx = editorRowRxToCx(row, match - row->render);
             E.rowoff = E.numrows;
             break;
@@ -524,9 +559,10 @@ void editorFindCallback(char *query, int key)
 void editorFind()
 {
     int saved_cx = E.cx, saved_cy = E.cy, saved_coloff = E.coloff, 
-        saved_rowoff = E.rowoff;
-    char *query = editorPrompt("Search: %s (ESC to cancel)",
-        editorFindCallback);
+            saved_rowoff = E.rowoff;
+
+    char *query = editorPrompt("Search: %s (Use ESC/Arrows/Enter)",
+            editorFindCallback);
     
     if(query)
     {
@@ -576,10 +612,10 @@ void editorDrawStatusBar(struct abuf *ab)
 
     char status[80], rstatus[80];
     int len = snprintf(status, sizeof(status), "%.20s - %d lines %s",
-        E.filename ? E.filename : "[No Name]", E.numrows,
-        E.dirty ? "(modified)" : "");
+            E.filename ? E.filename : "[No Name]", E.numrows,
+            E.dirty ? "(modified)" : "");
     int rlen = snprintf(rstatus, sizeof(rstatus), "%d/%d",
-        E.cy + 1, E.numrows);
+            E.cy + 1, E.numrows);
 
     if(len > E.screencols)
         len = E.screencols;
@@ -635,7 +671,7 @@ void editorDrawRows(struct abuf *ab)
             {
                 char welcome[80];
                 int welcomelen = snprintf(welcome, sizeof(welcome),
-                    "Kilo editor -- version %s", KILO_VERSION);
+                        "Kilo editor -- version %s", KILO_VERSION);
                 if(welcomelen > E.screencols) 
                 {
                     welcomelen = E.screencols;   
@@ -698,7 +734,7 @@ void editorRefreshScreen()
     editorDrawMessageBar(&ab);
 
     snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, 
-        (E.rx - E.coloff) + 1);
+            (E.rx - E.coloff) + 1);
     abAppend(&ab, buf, strlen(buf));
 
     abAppend(&ab, "\x1b[?25h", 6);
@@ -835,7 +871,7 @@ void editorProcessKeypress()
             if(E.dirty && quit_times > 0)
             {
                 editorSetStatusMessage("WARNING!!! File has unsaved changes. "
-                    "Press Ctrl-Q %d more times to quit.", quit_times);
+                        "Press Ctrl-Q %d more times to quit.", quit_times);
                 quit_times--;
                 return;
             }
@@ -927,7 +963,7 @@ int main(int argc, char *argv[])
         editorOpen(argv[1]);
 
     editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit | "
-        "Ctrl-F = find");
+            "Ctrl-F = find");
 
     while(1)
     {
