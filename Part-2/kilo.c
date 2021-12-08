@@ -67,7 +67,7 @@ void editorSetStatusMessage(const char *fmt, ...);
 
 void editorRefreshScreen();
 
-char *editorPrompt(char *prompt);
+char *editorPrompt(char *prompt, void (*callback)(char *, int));
 
 
 /* terminal */
@@ -455,7 +455,8 @@ void editorOpen(char *filename)
 
     while((linelen = getline(&line, &linecap, fp)) != -1)
     {
-        while(linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r'))
+        while(linelen > 0 && (line[linelen - 1] == '\n' ||
+            line[linelen - 1] == '\r'))
             linelen--;
         editorInsertRow(E.numrows, line, linelen);
     }
@@ -468,7 +469,7 @@ void editorSave()
 {
     if(E.filename == NULL)
     {
-        E.filename = editorPrompt("Save as: %s (ESC to cancel)");
+        E.filename = editorPrompt("Save as: %s (ESC to cancel)", NULL);
         if(E.filename == NULL)
         {
             editorSetStatusMessage("Save aborted");
@@ -500,10 +501,9 @@ void editorSave()
 
 
 /* find */
-void editorFind()
+void editorFindCallback(char *query, int key)
 {
-    char *query = editorPrompt("Search: %s (ESC to cancel)");
-    if(query == NULL)
+    if(key == '\r' || key == '\x1b')
         return;
 
     int i;
@@ -519,7 +519,26 @@ void editorFind()
             break;
         }
     }
-    free(query);
+}
+
+void editorFind()
+{
+    int saved_cx = E.cx, saved_cy = E.cy, saved_coloff = E.coloff, 
+        saved_rowoff = E.rowoff;
+    char *query = editorPrompt("Search: %s (ESC to cancel)",
+        editorFindCallback);
+    
+    if(query)
+    {
+        free(query);
+    }
+    else
+    {
+        E.cx = saved_cx;
+        E.cy = saved_cy;
+        E.coloff = saved_coloff;
+        E.rowoff = saved_rowoff;
+    }
 }
 
 
@@ -678,7 +697,8 @@ void editorRefreshScreen()
     editorDrawStatusBar(&ab);
     editorDrawMessageBar(&ab);
 
-    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, (E.rx - E.coloff) + 1);
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, 
+        (E.rx - E.coloff) + 1);
     abAppend(&ab, buf, strlen(buf));
 
     abAppend(&ab, "\x1b[?25h", 6);
@@ -698,7 +718,7 @@ void editorSetStatusMessage(const char *fmt, ...)
 
 
 /* input */
-char *editorPrompt(char *prompt)
+char *editorPrompt(char *prompt, void (*callback)(char *, int))
 {
     size_t bufsize = 128;
     char *buf = malloc(bufsize);
@@ -720,6 +740,8 @@ char *editorPrompt(char *prompt)
         else if(c == '\x1b')
         {
             editorSetStatusMessage("");
+            if(callback)
+                callback(buf, c);
             free(buf);
             return NULL;
         }
@@ -728,6 +750,8 @@ char *editorPrompt(char *prompt)
             if(buflen != 0)
             {
                 editorSetStatusMessage("");
+                if(callback)
+                    callback(buf, c);
                 return buf;
             }
         }
@@ -741,6 +765,9 @@ char *editorPrompt(char *prompt)
             buf[buflen++] = c;
             buf[buflen] = '\0';
         }
+
+        if(callback)
+            callback(buf, c);
     }
 }
 
@@ -899,7 +926,8 @@ int main(int argc, char *argv[])
     if(argc >= 2)
         editorOpen(argv[1]);
 
-    editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
+    editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit | "
+        "Ctrl-F = find");
 
     while(1)
     {
