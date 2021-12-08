@@ -23,6 +23,7 @@
 #define KILO_QUIT_TIMES 3
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define HL_HIGHLIGHT_NUMBERS (1<<0)
+#define HL_HIGHLIGHT_STRINGS (1<<1)
 
 enum editorKey
 {
@@ -41,9 +42,11 @@ enum editorKey
 enum editorHighlight
 {
     HL_NORMAL = 0,
+    HL_STRING,
     HL_NUMBER,
     HL_MATCH
 };
+
 
 /* data */
 struct editorSyntax
@@ -76,20 +79,19 @@ struct editorConfig
 
 struct editorConfig E;
 
+
 /* filetypes */
 char *C_HL_extensions[] = { ".c", ".h", ".cpp", NULL };
 
-struct editorSyntax HLDB[] =
-{
+struct editorSyntax HLDB[] = {
     {
         "c",
         C_HL_extensions,
-        HL_HIGHLIGHT_NUMBERS
+        HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
     },
 };
 
 #define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
-
 
 
 /* prototypes */
@@ -271,7 +273,7 @@ int is_separator(int c)
 
 void editorUpdateSyntax(erow *row)
 {
-    int i = 0, prev_sep = 1;
+    int i = 0, prev_sep = 1, in_string = 0;
 
     row->hl = realloc(row->hl, row->rsize);
     memset(row->hl, HL_NORMAL, row->rsize);
@@ -283,6 +285,36 @@ void editorUpdateSyntax(erow *row)
     {
         char c = row->render[i];
         unsigned char prev_hl = (i > 0) ? row->hl[i - 1] : HL_NORMAL;
+
+        if(E.syntax->flags & HL_HIGHLIGHT_STRINGS)
+        {
+            if(in_string)
+            {
+                row->hl[i] = HL_STRING;
+                if(c == '\\' && i + 1 < row->rsize)
+                {
+                    row->hl[i + 1] = HL_STRING;
+                    i += 2;
+                    continue;
+                }
+
+                if(c == in_string)
+                    in_string = 0;
+                prev_sep = 1;
+                i++;
+                continue;
+            }
+            else
+            {
+                if(c == '"' || c == '\'')
+                {
+                    in_string = c;
+                    row->hl[i] = HL_STRING;
+                    i++;
+                    continue;
+                }
+            }
+        }
 
         if(E.syntax->flags & HL_HIGHLIGHT_NUMBERS)
         {
@@ -308,6 +340,8 @@ int editorSyntaxToColor(int hl)
             return 31;
         case HL_MATCH:
             return 34;
+        case HL_STRING:
+            return 35;
         default:
             return 37;
     }
